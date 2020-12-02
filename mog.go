@@ -1,10 +1,9 @@
-// Mog - Mongo Made More Good
-
+// Mog makes using MongoDB fun and easy. It uses the official Go driver from MongoDB.
 package mog
 
 // mog := NewMog(db, ...collectionName)  	// db is *mongo.Database, collectionName is optional
 // mog.SetCollection(collectionName)		// change collection
-// mogSetLimit(limit int64)					// set limit value, resets after execution
+// mog.SetLimit(limit int64)					// set limit value, resets after execution
 // mog.KeepFlds(fld1, fld2, ...)  			// specify flds to return in Find results
 // mog.OmitFlds(fld1, fld2, ...)  			// specify flds to omit from Find results
 // mog.Find(criteria, ...sortFlds)  		// creates iterator (cursor), sortFlds optional, nil criteria returns all docs
@@ -33,6 +32,7 @@ import (
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
+// Type Mog contains almost everything.
 type Mog struct {
 	ctx            context.Context
 	db             *mongo.Database
@@ -46,6 +46,7 @@ type Mog struct {
 	upsert         bool // if true, Update will add docs not matching criteria
 }
 
+// NewMog creates instance of Mog.
 func NewMog(ctx context.Context, db *mongo.Database, collectionName ...string) *Mog {
 	mog := Mog{
 		ctx: ctx,
@@ -58,23 +59,26 @@ func NewMog(ctx context.Context, db *mongo.Database, collectionName ...string) *
 	return &mog
 }
 
+// SetCollection changes the collection used.
 func (mog *Mog) SetCollection(collectionName string) {
 	mog.collection = mog.db.Collection(collectionName)
 	mog.collectionName = collectionName
 }
 
+// SetLimit limits the number of docs returned. Reset after execution.
 func (mog *Mog) SetLimit(limit int64) {
 	mog.limit = limit
 }
 
+// Upsert turns upsert option on (see MongoDB doc). Reset after execution.
 func (mog *Mog) Upsert() {
 	mog.upsert = true
 }
 
-// Find creates a cursor (iterator) for docs meeting criteria
-// mog.iter = cursor
-// mog.Next uses mog.iter to iterate thru results
-// Use mog.KeepFlds or mog.OmitFlds to load mog.projectFlds.
+// Find sets mog.iter = mongo cursor (iterator) for docs meeting criteria.
+// Next() method uses mog.iter to iterate thru results.
+// Use criteria parm to filter results (nil for all docs in collection).
+// Use optional sortFlds to sort. Begin fieldname with "-" for descending.
 func (mog *Mog) Find(criteria interface{}, sortFlds ...string) {
 	findOptions := options.Find()
 	if len(sortFlds) > 0 {
@@ -95,9 +99,9 @@ func (mog *Mog) Find(criteria interface{}, sortFlds ...string) {
 	mog.iter = cursor
 }
 
-// FindAll loads all matching docs into docs
-// docs parm should be address of target slice where results will be loaded
-// Otherwise, works same as Find()
+// FindAll loads all matching docs into slice.
+// Parm "docs" should be address of target slice where results will be loaded.
+// Otherwise, works same as Find().
 func (mog *Mog) FindAll(criteria interface{}, docs interface{}, sortFlds ...string) error {
 	findOptions := options.Find()
 	if len(sortFlds) > 0 {
@@ -122,35 +126,35 @@ func (mog *Mog) FindAll(criteria interface{}, docs interface{}, sortFlds ...stri
 	return err
 }
 
-// *************************************************************************************
-// ErrNoDocuments means that the filter did not match any documents in the collection
-// if err == mongo.ErrNoDocuments {
-//	 ...
-// }
-// *************************************************************************************
-
-// FindOne returns the 1st doc found based on criteria and sort order
-// doc parm should be address of target where result will be loaded
+// FindOne returns the 1st doc found based on criteria and sort order.
+// Parm "doc" should be address of target where result will be loaded.
+// If error == mongo.ErrNoDocuments, no docs found matching criteria.
 func (mog *Mog) FindOne(criteria interface{}, doc interface{}, sortFlds ...string) error {
 	findOptions := options.FindOne()
 	if len(sortFlds) > 0 {
 		sortOrder := CreateSortOrder(sortFlds)
 		findOptions.SetSort(sortOrder)
 	}
+	if mog.projectFlds != nil {
+		findOptions.SetProjection(mog.projectFlds)
+	}
 	err := mog.collection.FindOne(mog.ctx, criteria, findOptions).Decode(doc)
 	return err
 }
 
-// FindId returns doc with matching _id
-// doc parm should be address of target where result will be loaded
+// FindId returns doc with matching _id.
+// Parm "doc" should be address of target where result will be loaded.
 func (mog *Mog) FindId(docId interface{}, doc interface{}) error {
 	criteria := bson.M{"_id": docId}
 	err := mog.collection.FindOne(mog.ctx, criteria).Decode(doc)
 	return err
 }
 
-// Next loads next doc returned by iterator (cursor) created by previous Find
-// doc should be address of target where next result will be loaded
+// Next loads next doc returned by mog.iter (cursor) created by previously run Find().
+// Parm "doc" should be address of target where next result will be loaded.
+// Returns true if more results to process, otherwise false.
+// After completion, usg mog.IterErr() to get error value.
+// Iterator is automatically closed after last result processed.
 func (mog *Mog) Next(doc interface{}) bool {
 	more := mog.iter.Next(mog.ctx)
 	if !more {
@@ -167,16 +171,18 @@ func (mog *Mog) Next(doc interface{}) bool {
 	return more
 }
 
+// IterErr returns value of mog.itererr which is set by Next() method.
 func (mog *Mog) IterErr() error {
 	return mog.iterErr
 }
 
+// CloseIter closes mog.iter. Use if all results not processed by Next().
 func (mog *Mog) CloseIter() error {
 	err := mog.iter.Close(mog.ctx)
 	return err
 }
 
-// Count returns count of docs matching criteria
+// Count returns count of docs matching criteria.
 func (mog *Mog) Count(criteria interface{}) (int64, error) {
 	countOptions := options.Count()
 	if mog.limit > 0 { // limit the number of docs to count
@@ -187,7 +193,7 @@ func (mog *Mog) Count(criteria interface{}) (int64, error) {
 	return count, err
 }
 
-// Update updates docs matching criteria using update
+// Update updates docs matching parm "criteria" using parm "update".
 func (mog *Mog) Update(criteria, update interface{}) (int64, error) {
 	updateOptions := options.Update()
 	if mog.upsert { // if true, insert docs not matching criteria
@@ -198,7 +204,7 @@ func (mog *Mog) Update(criteria, update interface{}) (int64, error) {
 	return changeInfo.ModifiedCount + changeInfo.UpsertedCount, err
 }
 
-// Replace replaces 1st doc matching criteria, with newDoc
+// Replace replaces 1st doc matching criteria, with newDoc.
 func (mog *Mog) Replace(criteria, newDoc interface{}) error {
 	replaceOptions := options.Replace()
 	if mog.upsert { // insert new doc, if no doc found matching criteria
@@ -209,32 +215,32 @@ func (mog *Mog) Replace(criteria, newDoc interface{}) error {
 	return err
 }
 
-// UpdateId updates doc with matching id
+// UpdateId updates doc with matching id.
 func (mog *Mog) UpdateId(docId, update interface{}) error {
 	criteria := bson.M{"_id": docId}
 	_, err := mog.collection.UpdateOne(mog.ctx, criteria, update)
 	return err
 }
 
-// Insert adds 1 or more documents to collection (use Bulk for large number of inserts)
+// Insert adds 1 or more documents to collection (use Bulk for large number of inserts).
 func (mog *Mog) Insert(docs ...interface{}) error {
 	_, err := mog.collection.InsertMany(mog.ctx, docs)
 	return err
 }
 
-// BulkStart called at beginning of bulk write process, size is estimated # of updates
+// BulkStart called at beginning of bulk write process, size is estimated # of updates.
 func (mog *Mog) BulkStart(size int) {
 	mog.bulkWrites = make([]mongo.WriteModel, 0, size)
 }
 
-// BulkAddInsert adds documents to be inserted to mog.BulkWrites
+// BulkAddInsert adds documents to be inserted to mog.BulkWrites.
 func (mog *Mog) BulkAddInsert(doc interface{}) {
 	model := mongo.NewInsertOneModel()
 	model.SetDocument(doc)
 	mog.bulkWrites = append(mog.bulkWrites, model)
 }
 
-// BulkAddUpdate adds matching criteria and update doc to mog.BulkWrites
+// BulkAddUpdate adds matching criteria and update doc to mog.BulkWrites.
 func (mog *Mog) BulkAddUpdate(criteria, update interface{}) {
 	model := mongo.NewUpdateManyModel()
 	model.SetFilter(criteria)
@@ -242,14 +248,15 @@ func (mog *Mog) BulkAddUpdate(criteria, update interface{}) {
 	mog.bulkWrites = append(mog.bulkWrites, model)
 }
 
-// BulkWrite executes bulk write using entries in mog.BulkWrites
+// BulkWrite executes bulk write using entries in mog.BulkWrites.
 func (mog *Mog) BulkWrite() (int64, error) {
 	result, err := mog.collection.BulkWrite(mog.ctx, mog.bulkWrites)
 	mog.bulkWrites = nil
 	return result.InsertedCount + result.ModifiedCount, err
 }
 
-// Keep loads ProjectFlds with map of flds to be kept in Find results
+// Keep loads ProjectFlds with map of flds to be kept in Find results.
+// Use Keep or Omit, not both.
 func (mog *Mog) Keep(flds ...string) {
 	if len(flds) == 0 { // allows reuse of same mog object when all fields should be returned
 		mog.projectFlds = nil
@@ -261,7 +268,8 @@ func (mog *Mog) Keep(flds ...string) {
 	}
 }
 
-// Omit loads ProjectFlds with map of flds to be omitted from Find results
+// Omit loads ProjectFlds with map of flds to be omitted from Find results.
+// Use Omit or Keep, not both.
 func (mog *Mog) Omit(flds ...string) {
 	if len(flds) == 0 { // allows reuse of same mog object when no fields should be omitted
 		mog.projectFlds = nil
@@ -273,10 +281,9 @@ func (mog *Mog) Omit(flds ...string) {
 	}
 }
 
-// CreateSorteOrder returns slice of elements defining sort order
-// keyFlds are field names to be sorted in order
-// keys to be sorted in descending order begin with a minus sign "-"
-// the val for each key is 1 for ascending, -1 for descending
+// CreateSorteOrder returns slice of bson elements (type bson.D) defining sort order.
+// Parm "keyFlds" are field names to be sorted in order of precedence.
+// Keys to be sorted in descending order begin with a minus sign "-".
 func CreateSortOrder(keyFlds []string) bson.D {
 	sortOrder := make(bson.D, len(keyFlds))
 	for i, keyFld := range keyFlds {
@@ -299,6 +306,7 @@ func CreateSortOrder(keyFlds []string) bson.D {
 		}
 */
 
+// NewDocId returns a unique 24 char hexadecimal value used for new doc ids.
 func NewDocId() string {
 	return primitive.NewObjectID().Hex()
 }

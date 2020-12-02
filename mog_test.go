@@ -142,14 +142,13 @@ func Test_Mog(t *testing.T) {
 	fmt.Println("test not found successful")
 
 	// ==========================================================================================
-	//   FindOne, return 1st doc using criteria and sort, omit DateAdded, LocationId from result
+	//   FindOne, return 1st doc using criteria and sort
 	// ==========================================================================================
 	criteria = m{"city": "Wonder"}
 	err = mog1.FindOne(criteria, &prop, "-address")
 	if err != nil || prop.Address != "321 Angel Way" {
 		fmt.Printf("%+v", prop)
 		t.Fatal("FindOne Failed", err)
-
 	}
 	fmt.Println("FindOne successful")
 
