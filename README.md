@@ -4,6 +4,15 @@ A Set Of Convenience Tools That Use Offical Go Driver From MongoDB
 
 **Inspired By MGO Driver** 
 
+Status - Passing all tests in mog_test.go.  
+  
+## Install & Use
+```
+go get github.com/txjmp/mog
+import "github.com/txjmp/mog"
+mog1 := mog.NewMog(ctx, db, collectionName)
+```
+
 See mog_test.go for complete examples.
 
 ## Quick Start
@@ -39,7 +48,7 @@ type Mog struct {
 }
 ```
 ## Mog Methods
-See GoDoc or mog.go for details.  
+See [GoDoc](https://godoc.org/github.com/txjmp/mog) or mog.go for details.  
 ```
 mog := NewMog(ctx, db, ...collectionName) - create new instance of Mog
 mog.SetCollection(collectionName)      - change collection
