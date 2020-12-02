@@ -23,3 +23,42 @@ for mog1.Next(&prop) {
 	fmt.Println(prop.City, prop.DateAdded, prop.Address)
 }
 ```
+## Mog Type
+```
+type Mog struct {
+	ctx            context.Context
+	db             *mongo.Database
+	collection     *mongo.Collection
+	collectionName string
+	projectFlds    bson.M             // flds to be kept or omitted, use .KeepFlds or .OmitFlds to load
+	bulkWrites     []mongo.WriteModel // Used by BulK.. methods
+	iter           *mongo.Cursor
+	iterErr        error
+	limit          int64
+	upsert         bool // if true, Update will add docs not matching criteria
+}
+```
+## Mog Methods
+See GoDoc or mog.go for details.  
+```
+mog := NewMog(ctx, db, ...collectionName) - create new instance of Mog
+mog.SetCollection(collectionName)      - change collection
+mog.SetLimit(limit int64)              - limit results, resets after execution
+mog.KeepFlds(fld1, fld2, ...)          - specify flds to return in Find results
+mog.OmitFlds(fld1, fld2, ...)          - specify flds to omit from Find results
+mog.Find(criteria, ...sortFlds)        - creates iterator (cursor), nil criteria returns all docs
+mog.Next(&doc)                         - use after Find, loads target with next doc from result
+mog.FindAll(criteria, docs, ...sortFlds) - works same as Find(), except all results are loaded into docs slice
+mog.IterErr() error					   - returns iterator (cursor) error after completing Find/Next process
+mog.FindOne(criteria, &doc, ...sortFlds) - loads doc with 1st result, sortFlds optional
+mog.FindId(docId, &doc) 				 - loads doc with result having matching id
+mog.Count(criteria) 					 - returns count of docs matching criteria
+mog.Update(criteria, update)  			 - update all docs matching criteria using update object
+mog.Replace(criteria, newDoc)  			 - replace 1st doc matching criteria with newDoc
+mog.Upsert()						     - turn upsert option on for updates, resets after execution
+mog.Insert(doc1, doc2, ...)  			 - insert 1 or more docs
+mog.BulkStart(size int)					 - start bulk process, size is estimated count of inserts + updates
+mog.BulkAddInsert(doc interface{}) 		 - append doc to be inserted to mog.BulkWrites slice
+mog.BulkAddUpdate(criteria, update interface{}) - append criteria and update to mog.BulkWrites slice
+mog.BulkWrite()			                 - apply inserts & updates stored in mog.BulkWrites slice
+```
