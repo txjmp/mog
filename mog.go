@@ -65,12 +65,12 @@ func (mog *Mog) SetCollection(collectionName string) {
 	mog.collectionName = collectionName
 }
 
-// SetLimit limits the number of docs returned. Reset after execution.
+// SetLimit limits the number of docs returned. Resets after execution.
 func (mog *Mog) SetLimit(limit int64) {
 	mog.limit = limit
 }
 
-// Upsert turns upsert option on (see MongoDB doc). Reset after execution.
+// Upsert turns upsert option on (see MongoDB doc). Resets after execution.
 func (mog *Mog) Upsert() {
 	mog.upsert = true
 }
@@ -256,6 +256,7 @@ func (mog *Mog) BulkWrite() (int64, error) {
 }
 
 // Keep loads ProjectFlds with map of flds to be kept in Find results.
+// Call Keep with no parms to reset to all fields.
 // Use Keep or Omit, not both.
 func (mog *Mog) Keep(flds ...string) {
 	if len(flds) == 0 { // allows reuse of same mog object when all fields should be returned
@@ -269,6 +270,7 @@ func (mog *Mog) Keep(flds ...string) {
 }
 
 // Omit loads ProjectFlds with map of flds to be omitted from Find results.
+// Call Omit with no parms to reset to all fields.
 // Use Omit or Keep, not both.
 func (mog *Mog) Omit(flds ...string) {
 	if len(flds) == 0 { // allows reuse of same mog object when no fields should be omitted
