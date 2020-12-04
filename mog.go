@@ -24,6 +24,7 @@ package mog
 
 import (
 	"context"
+	"errors"
 	"log"
 
 	"go.mongodb.org/mongo-driver/bson"
@@ -194,7 +195,11 @@ func (mog *Mog) Count(criteria interface{}) (int64, error) {
 }
 
 // Update updates docs matching parm "criteria" using parm "update".
+// To update all docs, criteria should be type bson.D with no elements - make(bson.D, 0).
 func (mog *Mog) Update(criteria, update interface{}) (int64, error) {
+	if criteria == nil {
+		return 0, errors.New("nil criteria not allowed for update")
+	}
 	updateOptions := options.Update()
 	if mog.upsert { // if true, insert docs not matching criteria
 		updateOptions.SetUpsert(true)
