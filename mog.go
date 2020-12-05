@@ -20,12 +20,17 @@ package mog
 // mog.BulkStart(size int)					// start bulk process, size is estimated count of inserts + updates
 // mog.BulkAddInsert(doc interface{}) 		// append doc to be inserted to mog.BulkWrites slice
 // mog.BulkAddUpdate(criteria, update interface{}) // append criteria and update code to mog.BulkWrites slice
-// mog.BulkWrite()			// apply inserts/updates stored in mog.BulkWrites, returns total of inserts + updates
+// mog.BulkWrite()							// apply inserts/updates stored in mog.BulkWrites, returns total of inserts + updates
+// mog.CsvStart(filePath)					// begin csv output
+// mog.CsvWrite(record)						// write record to csv output
+// mog.CsvDone()							// complete csv output
 
 import (
 	"context"
+	"encoding/csv"
 	"errors"
 	"log"
+	"os"
 
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -45,6 +50,8 @@ type Mog struct {
 	iterErr        error
 	limit          int64
 	upsert         bool // if true, Update will add docs not matching criteria
+	csvFile        *os.File
+	csvWriter      *csv.Writer
 }
 
 // NewMog creates instance of Mog.
@@ -195,7 +202,7 @@ func (mog *Mog) Count(criteria interface{}) (int64, error) {
 }
 
 // Update updates docs matching parm "criteria" using parm "update".
-// To update all docs, criteria should be type bson.D with no elements - make(bson.D, 0).
+// To update all docs, criteria should be type bson.D with no elements - bson.D{}.
 func (mog *Mog) Update(criteria, update interface{}) (int64, error) {
 	if criteria == nil {
 		return 0, errors.New("nil criteria not allowed for update")
@@ -286,6 +293,34 @@ func (mog *Mog) Omit(flds ...string) {
 	for _, fld := range flds {
 		mog.projectFlds[fld] = 0
 	}
+}
+
+// CsvStart creates csv output file and csv writer. Comma is field delimiter.
+// Optional useCRLF indicates records should end with \r\n. Default terminator is \n.
+func (mog *Mog) CsvStart(filePath string, useCRLF ...bool) error {
+	var err error
+	mog.csvFile, err = os.Create(filePath)
+	if err != nil {
+		return err
+	}
+	mog.csvWriter = csv.NewWriter(mog.csvFile)
+	if len(useCRLF) > 0 && useCRLF[0] {
+		mog.csvWriter.UseCRLF = true
+	}
+	return nil
+}
+
+// CsvWrite writes record using csv writer created by CsvStart.
+func (mog *Mog) CsvWrite(record []string) {
+	mog.csvWriter.Write(record)
+}
+
+// CsvDone flushes csv writer and closes output file.
+// Any error that occurred during write or flush steps is returned.
+func (mog *Mog) CsvDone() error {
+	mog.csvWriter.Flush()
+	mog.csvFile.Close()
+	return mog.csvWriter.Error()
 }
 
 // CreateSorteOrder returns slice of bson elements (type bson.D) defining sort order.

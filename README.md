@@ -70,4 +70,8 @@ mog.BulkStart(size int)					 - start bulk process, size is estimated count of in
 mog.BulkAddInsert(doc interface{}) 		 - append doc to be inserted to mog.BulkWrites slice
 mog.BulkAddUpdate(criteria, update interface{}) - append criteria and update to mog.BulkWrites slice
 mog.BulkWrite()			                 - apply inserts & updates stored in mog.BulkWrites slice
+mog.CsvStart(filePath)                   - begin csv output 
+mog.CsvWrite(record)                     - write record to csv output
+mog.CsvDone()                            - complete csv output
+
 ```
