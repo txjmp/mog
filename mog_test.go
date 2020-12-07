@@ -104,14 +104,16 @@ func Test_Mog(t *testing.T) {
 	mog1.Omit("city", "location_id")
 	mog1.SetLimit(2) // limit result set to 2 docs
 	mog1.Find(nil, "address")
+	var returnCnt int
 	for mog1.Next(&prop) {
 		if prop.City != "" || prop.LocationId != "" {
 			t.Fatal("Omit Fields Failed", err)
 		}
 		fmt.Println(prop)
+		returnCnt++
 	}
-	if mog1.IterErr() != nil {
-		t.Fatal("Find/Iterate Failed", err)
+	if mog1.IterErr() != nil || returnCnt != 2 {
+		t.Fatal("Find/Iterate Failed", err, returnCnt)
 	}
 	fmt.Println("find/iterated successful")
 

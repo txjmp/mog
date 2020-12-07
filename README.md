@@ -4,7 +4,7 @@ A Set Of Convenience Tools That Use Offical Go Driver From MongoDB
 
 **Inspired By MGO Driver** 
 
-Status - Passing all tests in mog_test.go.  
+Status - Passing all tests in mog_test.go and examples_test.go  
   
 ## Install & Use
 ```
@@ -13,7 +13,7 @@ import "github.com/txjmp/mog"
 mog1 := mog.NewMog(ctx, db, collectionName)
 ```
 
-See mog_test.go for complete examples.
+See mog_test.go and examples_test.go for complete examples.
 
 ## Quick Start
 ```
@@ -45,7 +45,10 @@ type Mog struct {
 	iterErr        error
 	limit          int64
 	upsert         bool // if true, Update will add docs not matching criteria
-}
+	csvFile        *os.File
+	csvWriter      *csv.Writer
+	csvReader      *csv.Reader
+}	
 ```
 ## Mog Methods
 See [GoDoc](https://godoc.org/github.com/txjmp/mog) or mog.go for details.  
@@ -70,8 +73,5 @@ mog.BulkStart(size int)					 - start bulk process, size is estimated count of in
 mog.BulkAddInsert(doc interface{}) 		 - append doc to be inserted to mog.BulkWrites slice
 mog.BulkAddUpdate(criteria, update interface{}) - append criteria and update to mog.BulkWrites slice
 mog.BulkWrite()			                 - apply inserts & updates stored in mog.BulkWrites slice
-mog.CsvStart(filePath)                   - begin csv output 
-mog.CsvWrite(record)                     - write record to csv output
-mog.CsvDone()                            - complete csv output
-
+csv input/output methods - see GoDoc or mog.go for details and examples_test.go for example code.
 ```

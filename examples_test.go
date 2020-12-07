@@ -3,7 +3,9 @@ package mog
 import (
 	"context"
 	"fmt"
+	"io"
 	"log"
+	"strings"
 
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
@@ -85,7 +87,9 @@ func ExampleMog() {
 	// ===================================================================================
 	mog1.SetCollection("property")
 
-	err = mog1.CsvStart("/home/jay/test/mog_props.csv")
+	filePath := "/home/jay/test/mog_props.csv"
+
+	err = mog1.CsvOutStart(filePath)
 	if err != nil {
 		fmt.Println(err)
 		return
@@ -100,13 +104,32 @@ func ExampleMog() {
 		record := []string{locName, prop.Address, prop.City}
 		mog1.CsvWrite(record)
 	}
-	err = mog1.CsvDone()
+	err = mog1.CsvOutDone()
 
+	// ===================================================================================
+	//  Read CSV file.
+	// ===================================================================================
+	err = mog1.CsvInStart(filePath)
+	defer mog1.CsvInDone()
 	if err != nil {
-		fmt.Println("failed")
-	} else {
-		fmt.Println("done")
+		fmt.Println("csvinstart failed", err)
+		return
+	}
+	var rec []string
+	for {
+		rec, err = mog1.CsvRead()
+		if err != nil {
+			break
+		}
+		fmt.Println(strings.Join(rec, "|"))
+	}
+	if err != io.EOF {
+		fmt.Println("csvread failed", err)
 	}
 
-	// Output: done
+	// Output:
+	// Location|Address|City
+	// Northwest|200 Willow Rd|Wonder
+	// Northwest|321 Angel Way|Wonder
+	// Southwest|1950 Hangover|Las Vegas
 }

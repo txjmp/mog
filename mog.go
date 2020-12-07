@@ -21,9 +21,12 @@ package mog
 // mog.BulkAddInsert(doc interface{}) 		// append doc to be inserted to mog.BulkWrites slice
 // mog.BulkAddUpdate(criteria, update interface{}) // append criteria and update code to mog.BulkWrites slice
 // mog.BulkWrite()							// apply inserts/updates stored in mog.BulkWrites, returns total of inserts + updates
-// mog.CsvStart(filePath)					// begin csv output
+// mog.CsvOutStart(filePath)				// begin csv output
 // mog.CsvWrite(record)						// write record to csv output
-// mog.CsvDone()							// complete csv output
+// mog.CsvOutDone()							// complete csv output
+// mog.CsvInStart(filePath)					// begin csv input
+// mog.CsvRead()							// read record from csv input
+// mog.CsvInDone()							// close csv input file
 
 import (
 	"context"
@@ -52,6 +55,7 @@ type Mog struct {
 	upsert         bool // if true, Update will add docs not matching criteria
 	csvFile        *os.File
 	csvWriter      *csv.Writer
+	csvReader      *csv.Reader
 }
 
 // NewMog creates instance of Mog.
@@ -295,32 +299,55 @@ func (mog *Mog) Omit(flds ...string) {
 	}
 }
 
-// CsvStart creates csv output file and csv writer. Comma is field delimiter.
+// CsvOutStart creates csv output file and csv writer. Comma is field delimiter.
 // Optional useCRLF indicates records should end with \r\n. Default terminator is \n.
-func (mog *Mog) CsvStart(filePath string, useCRLF ...bool) error {
+func (mog *Mog) CsvOutStart(filePath string, useCRLF ...bool) error {
 	var err error
 	mog.csvFile, err = os.Create(filePath)
 	if err != nil {
 		return err
 	}
 	mog.csvWriter = csv.NewWriter(mog.csvFile)
-	if len(useCRLF) > 0 && useCRLF[0] {
-		mog.csvWriter.UseCRLF = true
+	if len(useCRLF) > 0 {
+		mog.csvWriter.UseCRLF = useCRLF[0]
 	}
 	return nil
 }
 
-// CsvWrite writes record using csv writer created by CsvStart.
+// CsvInStart opens input file and creates csv reader.
+func (mog *Mog) CsvInStart(filePath string) error {
+	var err error
+	mog.csvFile, err = os.Open(filePath)
+	if err != nil {
+		return err
+	}
+	mog.csvReader = csv.NewReader(mog.csvFile)
+	return nil
+}
+
+// CsvWrite writes record using csv writer created by CsvOutStart.
 func (mog *Mog) CsvWrite(record []string) {
 	mog.csvWriter.Write(record)
 }
 
-// CsvDone flushes csv writer and closes output file.
+// CsvRead reads record using csv reader created by CsvInStart.
+// After all data is read, returns nil, io.EOF.
+func (mog *Mog) CsvRead() ([]string, error) {
+	record, err := mog.csvReader.Read()
+	return record, err
+}
+
+// CsvOutDone flushes csv writer and closes output file.
 // Any error that occurred during write or flush steps is returned.
-func (mog *Mog) CsvDone() error {
+func (mog *Mog) CsvOutDone() error {
 	mog.csvWriter.Flush()
 	mog.csvFile.Close()
 	return mog.csvWriter.Error()
+}
+
+// CsvInDone closes input csv file.
+func (mog *Mog) CsvInDone() {
+	mog.csvFile.Close()
 }
 
 // CreateSorteOrder returns slice of bson elements (type bson.D) defining sort order.
