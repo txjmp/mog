@@ -1,6 +1,6 @@
 # Mog : MongoDB + Go, Simplified
 
-A Set Of Convenience Tools That Use Offical Go Driver From MongoDB  
+A set Of convenience tools that work with the offical Go driver From MongoDB. Intermix mog code with code directly using Mongo driver.  
 
 **Inspired By MGO Driver** 
 
@@ -48,6 +48,7 @@ type Mog struct {
 	csvFile        *os.File
 	csvWriter      *csv.Writer
 	csvReader      *csv.Reader
+	AggPipeline		[]bson.M
 }	
 ```
 ## Mog Methods
@@ -73,5 +74,6 @@ mog.BulkStart(size int)					 - start bulk process, size is estimated count of in
 mog.BulkAddInsert(doc interface{}) 		 - append doc to be inserted to mog.BulkWrites slice
 mog.BulkAddUpdate(criteria, update interface{}) - append criteria and update to mog.BulkWrites slice
 mog.BulkWrite()			                 - apply inserts & updates stored in mog.BulkWrites slice
-csv input/output methods - see GoDoc or mog.go for details and examples_test.go for example code.
+csv input/output methods - see GoDoc or mog.go for details. Examples in examples_test.go for example code.
+aggregate methods - see GoDoc or mog.go for details. Examples in aggregate_test.go
 ```

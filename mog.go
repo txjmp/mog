@@ -1,4 +1,4 @@
-// Mog makes using MongoDB fun and easy. It uses the official Go driver from MongoDB.
+// Package Mog makes using MongoDB fun and easy. It uses the official Go driver from MongoDB.
 package mog
 
 // mog := NewMog(db, ...collectionName)  	// db is *mongo.Database, collectionName is optional
@@ -32,6 +32,7 @@ import (
 	"context"
 	"encoding/csv"
 	"errors"
+	"fmt"
 	"log"
 	"os"
 
@@ -56,6 +57,7 @@ type Mog struct {
 	csvFile        *os.File
 	csvWriter      *csv.Writer
 	csvReader      *csv.Reader
+	AggPipeline    []bson.M
 }
 
 // NewMog creates instance of Mog.
@@ -299,6 +301,8 @@ func (mog *Mog) Omit(flds ...string) {
 	}
 }
 
+// --- CSV Methods ----------------------------------------------------
+
 // CsvOutStart creates csv output file and csv writer. Comma is field delimiter.
 // Optional useCRLF indicates records should end with \r\n. Default terminator is \n.
 func (mog *Mog) CsvOutStart(filePath string, useCRLF ...bool) error {
@@ -348,6 +352,57 @@ func (mog *Mog) CsvOutDone() error {
 // CsvInDone closes input csv file.
 func (mog *Mog) CsvInDone() {
 	mog.csvFile.Close()
+}
+
+// --- Aggregate Methods ----------------------------------------------------
+
+// AggStart makes new AggPipeline slice.
+func (mog *Mog) AggStart() {
+	mog.AggPipeline = make([]bson.M, 0, 10)
+}
+
+// AggStage adds a stage to AggPipeline.
+// Parm "op" is operation ("match", "group", etc.)
+// Parm "opParms" is map of values used for the operations.
+// Ex: AggStage("group", bson.M{"_id": "$st", "count": bson.M{"$sum": 1}})
+func (mog *Mog) AggStage(op string, opParms bson.M) {
+	opCode := "$" + op
+	stage := bson.M{opCode: opParms}
+	mog.AggPipeline = append(mog.AggPipeline, stage)
+}
+
+// AggSort adds sort stage to AggPipeline.
+// More convenient than using AggStage method.
+func (mog *Mog) AggSort(keyFlds ...string) {
+	var sortOrder bson.D
+	sortOrder = CreateSortOrder(keyFlds)
+	stage := bson.M{"$sort": sortOrder}
+	mog.AggPipeline = append(mog.AggPipeline, stage)
+}
+
+// AggRun executes the collection.Aggregate method using the AggPipeline.
+// Options can be set using optional mongo/options.AggregateOptions (see Mongo driver documentation).
+// The iterator, mog.iter, is loaded with the results cursor.
+// Use mog.Next() to iterate thru the results.
+// After complete, use mog.IterErr() to check for errors.
+func (mog *Mog) AggRun(aggOptions ...*options.AggregateOptions) error {
+	opts := new(options.AggregateOptions)
+	if len(aggOptions) > 0 {
+		opts = aggOptions[0]
+	}
+	cursor, err := mog.collection.Aggregate(mog.ctx, mog.AggPipeline, opts)
+	mog.iter = cursor
+	return err
+}
+
+// AggShowPipeline displays the aggregation pipeline stages(mog.AggPipeline).
+// Useful for debugging.
+func (mog *Mog) AggShowPipeline() {
+	fmt.Println("--- Aggregate Pipeline Stages ----------------------------")
+	for _, stage := range mog.AggPipeline {
+		fmt.Printf("%+v\n", stage)
+	}
+	fmt.Println()
 }
 
 // CreateSorteOrder returns slice of bson elements (type bson.D) defining sort order.
