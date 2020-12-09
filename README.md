@@ -42,11 +42,13 @@ There are a set of methods that handle aggregation processing. Some of these met
 **see aggregate_test.go for examples**
 ```
 AggStart() - makes the AggPipeline slice 
-AggKeep() - adds a $project stage (works like Keep method)
+AggKeep() - adds a $project stage, specifies fields passed to next stage
+AggOmit() - adds a $project stage, specifies fields not passed to next stage
 AggSort() - adds a $sort stage (works like Sort method)
 AggLookupId() - adds $lookup and $unwind stages, using fromCollection primary key (_id) field to join
 AggStage() - adds a stage of your making to AggPipeline
-AggRun() - executes the aggregation
+AggRun() - executes the aggregation, iterate thru results using .Next(&target) loop
+AggRunAll() - executes the aggregation, all results decoded into target slice
 AggShowPipeline() - displays the stages (for debugging)
 Iterate thru results same as Find results using for Next(&target) loop
 ```

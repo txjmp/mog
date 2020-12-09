@@ -87,6 +87,19 @@ func ExampleAggregate() {
 	for mog1.Next(&result) {
 		fmt.Println(result.State, result.Count)
 	}
+
+	// === run same pipeline using AggRunAll ============================
+
+	type result1a struct {
+		State string `bson:"_id"`
+		Count int    `bson:"count"`
+	}
+	var target []result1a
+	mog1.AggRunAll(&target)
+	fmt.Println("--- result1-all ----------------------")
+	for _, rec := range target {
+		fmt.Println(rec.State, rec.Count)
+	}
 	// ===================================================================================
 	//   Aggregate - lookup location
 	// ===================================================================================
@@ -115,6 +128,9 @@ func ExampleAggregate() {
 
 	// Output:
 	// --- result1 ----------------------
+	// MT 2
+	// NV 1
+	// --- result1-all ----------------------
 	// MT 2
 	// NV 1
 	// --- result2 ----------------------

@@ -397,12 +397,24 @@ func (mog *Mog) AggLookupId(fromCollection, localField, asName string) {
 }
 
 // AggKeep works basically the same as Keep method (used for Find operations).
-// It determines what fields are passed along in the pipeline.
+// It determines what fields are kept and passed to the next stage of the pipeline.
 // A $project stage is added to AggPipeline.
+// To add new fields, create your own $project stage and add using AggStage().
 func (mog *Mog) AggKeep(flds ...string) {
 	projectFlds := make(bson.M)
 	for _, fld := range flds {
 		projectFlds[fld] = 1
+	}
+	mog.AggStage("project", projectFlds)
+}
+
+// AggOmit works basically the same as Omit method (used for Find operations).
+// It determines what fields are not passed to the next stage of the pipeline.
+// A $project stage is added to AggPipeline.
+func (mog *Mog) AggOmit(flds ...string) {
+	projectFlds := make(bson.M)
+	for _, fld := range flds {
+		projectFlds[fld] = 0
 	}
 	mog.AggStage("project", projectFlds)
 }
@@ -428,6 +440,18 @@ func (mog *Mog) AggRun(aggOptions ...*options.AggregateOptions) error {
 	}
 	cursor, err := mog.collection.Aggregate(mog.ctx, mog.AggPipeline, opts)
 	mog.iter = cursor
+	return err
+}
+
+// AggRunAll works like AggRun except all results are loaded into target.
+// Parm "target" should be pointer to slice.
+func (mog *Mog) AggRunAll(target interface{}, aggOptions ...*options.AggregateOptions) error {
+	opts := new(options.AggregateOptions)
+	if len(aggOptions) > 0 {
+		opts = aggOptions[0]
+	}
+	cursor, err := mog.collection.Aggregate(mog.ctx, mog.AggPipeline, opts)
+	err = cursor.All(mog.ctx, target)
 	return err
 }
 
