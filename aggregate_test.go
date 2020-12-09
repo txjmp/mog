@@ -54,7 +54,6 @@ func ExampleAggregate() {
 	}
 	mog1 := NewMog(ctx, db, "location")
 	mog1.Insert(locs[0], locs[1])
-
 	// ===================================================================================
 	//   Add properties for test data using Bulk methods.
 	// ===================================================================================
@@ -75,50 +74,52 @@ func ExampleAggregate() {
 	mog1.AggStart()                                                          // create new pipeline slice to hold stages
 	mog1.AggStage("group", bson.M{"_id": "$st", "count": bson.M{"$sum": 1}}) // add stage - count props by state
 	mog1.AggSort("_id")                                                      // add stage - sort by the group id (state)
-	mog1.AggShowPipeline()                                                   // for debugging
-	opts := options.Aggregate().SetMaxTime(2 * time.Second)                  // see mongo driver documentation for all options
-	mog1.AggRun(opts)
+	//mog1.AggShowPipeline()                                                   // for debugging
+	opts := options.Aggregate().SetMaxTime(2 * time.Second) // see mongo driver documentation for all options
+	err = mog1.AggRun(opts)
 
 	//var result bson.D   // generic way to decode result record
 	var result struct {
 		State string `bson:"_id"`
 		Count int    `bson:"count"`
 	}
+	fmt.Println("--- result1 ----------------------")
 	for mog1.Next(&result) {
-		fmt.Printf("%+v\n", result)
+		fmt.Println(result.State, result.Count)
+	}
+	// ===================================================================================
+	//   Aggregate - lookup location
+	// ===================================================================================
+	mog1.AggStart()                                    // create new pipeline slice to hold stages
+	mog1.AggLookupId("location", "location_id", "loc") // add lookup & unwind stages
+	mog1.AggKeep("address", "loc")                     // add project stage
+	//mog1.AggShowPipeline()                                                   // for debugging
+	err = mog1.AggRun()
+	if err != nil {
+		panic(err)
+	}
+	var result2 struct {
+		Id      string `bson:"_id"`
+		Address string `bson:"address"`
+		Loc     struct {
+			LocName string `bson:"location_name"`
+		} `bson:"loc"`
+	}
+	fmt.Println("--- result2 ----------------------")
+	for mog1.Next(&result2) {
+		fmt.Println(result2.Address, result2.Loc.LocName)
+	}
+	if mog1.IterErr() != nil {
+		panic(err)
 	}
 
-	/*
-		pipeLine := []m{
-			m{"$project": m{"address": 1, "st": 1, "city": 1, "notecount": m{"$size": "$notes"}}},  // output address, city, st, notecount
-			m{"$match": m{"notecount": m{"$gt": 2}}},                                               // keep docs with more than 2 notes
-			m{"$sort": bson.D{{"st", 1}, {"city", 1}}},                                             // sort results by state, city - see note above
-		}
-		iter := collection.Pipe(pipeLine).Iter()
-		defer iter.Close()
-
-		var result struct {
-			Id        string `bson:"_id"`
-			State     string `bson:"st"`
-			City      string `bson:"city"`
-			Address   string `bson:"address"`
-			NoteCount int    `bson:"notecount"`
-		}
-		for iter.Next(&result) {
-			log.Printf("%+v", result)
-		}
-		if iter.Err() != nil {
-			log.Println(iter.Err())
-		}
-	*/
-	//pipeLine := mongo.Pipeline{
-	//	{{"$group", bson.D{{"_id", "$st"}, {"totalPop", bson.D{{"$sum", "$pop"}}}}}},
-	//	{{"$match", bson.D{{"totalPop", bson.D{{"$gte", 10*1000*1000}}}}}},
-	//}
-
 	// Output:
-	// Location|Address|City
-	// Northwest|200 Willow Rd|Wonder
-	// Northwest|321 Angel Way|Wonder
-	// Southwest|1950 Hangover|Las Vegas
+	// --- result1 ----------------------
+	// MT 2
+	// NV 1
+	// --- result2 ----------------------
+	// 200 Willow Rd Northwest
+	// 321 Angel Way Northwest
+	// 1950 Hangover Southwest
+
 }

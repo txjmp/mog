@@ -371,6 +371,30 @@ func (mog *Mog) AggStage(op string, opParms bson.M) {
 	mog.AggPipeline = append(mog.AggPipeline, stage)
 }
 
+// AggLookupId adds $lookup and $unwind stages to AggPipeline.
+// ForeignField is assumed to be "_id".
+// There should be 1 doc in fromCollection where _id value matches localField value.
+func (mog *Mog) AggLookupId(fromCollection, localField, asName string) {
+	mog.AggStage("lookup", bson.M{
+		"from":         fromCollection,
+		"localField":   localField,
+		"foreignField": "_id",
+		"as":           asName,
+	})
+	mog.AggPipeline = append(mog.AggPipeline, bson.M{"$unwind": "$" + asName})
+}
+
+// AggKeep works basically the same as Keep method (used for Find operations).
+// It determines what fields are passed along in the pipeline.
+// A $project stage is added to AggPipeline.
+func (mog *Mog) AggKeep(flds ...string) {
+	projectFlds := make(bson.M)
+	for _, fld := range flds {
+		projectFlds[fld] = 1
+	}
+	mog.AggStage("project", projectFlds)
+}
+
 // AggSort adds sort stage to AggPipeline.
 // More convenient than using AggStage method.
 func (mog *Mog) AggSort(keyFlds ...string) {
