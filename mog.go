@@ -341,6 +341,18 @@ func (mog *Mog) CsvRead() ([]string, error) {
 	return record, err
 }
 
+// CsvReadAll reads all records from input file and returns slice of records.
+// Handles opening and closing file. No need to call CsvInStart() or CsvInDone().
+func (mog *Mog) CsvReadAll(filePath string) ([][]string, error) {
+	err := mog.CsvInStart(filePath)
+	if err != nil {
+		return nil, err
+	}
+	records, err := mog.csvReader.ReadAll()
+	mog.CsvInDone() // closes input file
+	return records, err
+}
+
 // CsvOutDone flushes csv writer and closes output file.
 // Any error that occurred during write or flush steps is returned.
 func (mog *Mog) CsvOutDone() error {

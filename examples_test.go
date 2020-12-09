@@ -110,12 +110,12 @@ func ExampleMog() {
 	//  Read CSV file.
 	// ===================================================================================
 	err = mog1.CsvInStart(filePath)
-	defer mog1.CsvInDone()
 	if err != nil {
 		fmt.Println("csvinstart failed", err)
 		return
 	}
 	var rec []string
+	fmt.Println("--- result 1 ------------------")
 	for {
 		rec, err = mog1.CsvRead()
 		if err != nil {
@@ -126,8 +126,26 @@ func ExampleMog() {
 	if err != io.EOF {
 		fmt.Println("csvread failed", err)
 	}
+	mog1.CsvInDone()
+	// ===================================================================================
+	//  ReadAll CSV file.
+	// ===================================================================================
+	records, err := mog1.CsvReadAll(filePath)
+	if err != nil {
+		panic(err)
+	}
+	fmt.Println("--- result 2 ------------------")
+	for _, rec := range records {
+		fmt.Println(strings.Join(rec, "|"))
+	}
 
 	// Output:
+	// --- result 1 ------------------
+	// Location|Address|City
+	// Northwest|200 Willow Rd|Wonder
+	// Northwest|321 Angel Way|Wonder
+	// Southwest|1950 Hangover|Las Vegas
+	// --- result 2 ------------------
 	// Location|Address|City
 	// Northwest|200 Willow Rd|Wonder
 	// Northwest|321 Angel Way|Wonder

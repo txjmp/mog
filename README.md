@@ -55,11 +55,12 @@ There are a set of methods for exporting and importing data via csv files. Some 
 **see examples_test.go for csv examples**
 ```
 CsvOutStart() - creates the export file and csv writer
-CsvInStart() - opens the import file and creates the csv reader
 CsvWrite() - writes a record
-CsvRead() - reads a record
 CsvOutDone() - flushes the csv writer and closes the output file
+CsvInStart() - opens the import file and creates the csv reader
+CsvRead() - reads a record
 CsvInDone() - closes the input file
+CsvReadAll() - opens,reads,closes entire file and returns [][]string
 ```
 ## Mog Type
 ```
