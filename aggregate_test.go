@@ -105,10 +105,11 @@ func ExampleAggregate() {
 	// ===================================================================================
 	//   Use AggLookupId to join location docs to property docs
 	// ===================================================================================
-	mog1.AggStart()                                    // create new pipeline slice to hold stages
-	mog1.AggLookupId("location", "location_id", "loc") // add lookup & unwind stages
-	mog1.AggKeep("address", "loc")                     // add project stage
-	//mog1.AggShowPipeline()                                                   // for debugging
+	mog1.AggStart()                             // create new pipeline slice to hold stages
+	mog1.AggLookupId("location", "location_id") // add lookup & unwind stages, asName defaults to fromCollection ("location")
+	//mog1.AggLookupId("location", "location_id", "loc") // if this version used, asName is "loc"
+	mog1.AggKeep("address", "location") // add project stage
+	//mog1.AggShowPipeline()              // for debugging
 	err = mog1.AggRun()
 	if err != nil {
 		panic(err)
@@ -118,7 +119,7 @@ func ExampleAggregate() {
 		Address string `bson:"address"`
 		Loc     struct {
 			LocName string `bson:"location_name"`
-		} `bson:"loc"`
+		} `bson:"location"`
 	}
 	fmt.Println("--- result2 ----------------------")
 	for mog1.Next(&result2) {

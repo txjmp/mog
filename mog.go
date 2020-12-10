@@ -385,15 +385,18 @@ func (mog *Mog) AggStage(op string, opParms bson.M) {
 
 // AggLookupId adds $lookup and $unwind stages to AggPipeline.
 // ForeignField is assumed to be "_id".
-// There should be 1 doc in fromCollection where _id value matches localField value.
-func (mog *Mog) AggLookupId(fromCollection, localField, asName string) {
+// The joined sub-document field name defaults to "fromCollection", to override include parm "asName".
+func (mog *Mog) AggLookupId(fromCollection, localField string, asName ...string) {
+	if len(asName) == 0 {
+		asName = []string{fromCollection}
+	}
 	mog.AggStage("lookup", bson.M{
 		"from":         fromCollection,
 		"localField":   localField,
 		"foreignField": "_id",
-		"as":           asName,
+		"as":           asName[0],
 	})
-	mog.AggPipeline = append(mog.AggPipeline, bson.M{"$unwind": "$" + asName})
+	mog.AggPipeline = append(mog.AggPipeline, bson.M{"$unwind": "$" + asName[0]})
 }
 
 // AggKeep works basically the same as Keep method (used for Find operations).
