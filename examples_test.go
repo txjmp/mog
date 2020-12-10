@@ -109,24 +109,39 @@ func ExampleMog() {
 	// ===================================================================================
 	//  Read CSV file.
 	// ===================================================================================
-	err = mog1.CsvInStart(filePath)
+	headers = []string{"Location", "Address", "City"}
+	err = mog1.CsvInStart(filePath, headers) // headers optional, must include to use CsvGetVal
 	if err != nil {
 		fmt.Println("csvinstart failed", err)
 		return
 	}
 	var rec []string
+	var location, address, city string
+
+	rec, err = mog1.CsvRead()
+	if err = mog1.CsvVerifyHeaders(rec); err != nil { // verify headers used in CsvInStart match fields in 1st record of csv file
+		panic(err)
+	}
 	fmt.Println("--- result 1 ------------------")
-	for {
-		rec, err = mog1.CsvRead()
-		if err != nil {
+	for err == nil {
+		if location, err = mog1.CsvGetVal(rec, "location"); err != nil {
 			break
 		}
-		fmt.Println(strings.Join(rec, "|"))
+		if address, err = mog1.CsvGetVal(rec, "address"); err != nil {
+			break
+		}
+		if city, err = mog1.CsvGetVal(rec, "city"); err != nil {
+			break
+		}
+		fmt.Println(location, "|", address, "|", city)
+
+		rec, err = mog1.CsvRead()
 	}
 	if err != io.EOF {
 		fmt.Println("csvread failed", err)
 	}
-	mog1.CsvInDone()
+	mog1.CsvInDone() // typically place immediately after CsvInStart using defer (next step requires it to be closed now)
+
 	// ===================================================================================
 	//  ReadAll CSV file.
 	// ===================================================================================
@@ -136,18 +151,18 @@ func ExampleMog() {
 	}
 	fmt.Println("--- result 2 ------------------")
 	for _, rec := range records {
-		fmt.Println(strings.Join(rec, "|"))
+		fmt.Println(strings.Join(rec, " | "))
 	}
 
 	// Output:
 	// --- result 1 ------------------
-	// Location|Address|City
-	// Northwest|200 Willow Rd|Wonder
-	// Northwest|321 Angel Way|Wonder
-	// Southwest|1950 Hangover|Las Vegas
+	// Location | Address | City
+	// Northwest | 200 Willow Rd | Wonder
+	// Northwest | 321 Angel Way | Wonder
+	// Southwest | 1950 Hangover | Las Vegas
 	// --- result 2 ------------------
-	// Location|Address|City
-	// Northwest|200 Willow Rd|Wonder
-	// Northwest|321 Angel Way|Wonder
-	// Southwest|1950 Hangover|Las Vegas
+	// Location | Address| City
+	// Northwest | 200 Willow Rd |Wonder
+	// Northwest | 321 Angel Way |Wonder
+	// Southwest | 1950 Hangover | Las Vegas
 }

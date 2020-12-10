@@ -35,6 +35,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"strings"
 
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -44,20 +45,22 @@ import (
 
 // Type Mog contains almost everything.
 type Mog struct {
-	ctx            context.Context
-	db             *mongo.Database
-	collection     *mongo.Collection
-	collectionName string
-	projectFlds    bson.M             // flds to be kept or omitted, use .KeepFlds or .OmitFlds to load
-	bulkWrites     []mongo.WriteModel // Used by BulK.. methods
-	iter           *mongo.Cursor
-	iterErr        error
-	limit          int64
-	upsert         bool // if true, Update will add docs not matching criteria
-	csvFile        *os.File
-	csvWriter      *csv.Writer
-	csvReader      *csv.Reader
-	AggPipeline    []bson.M
+	ctx             context.Context
+	db              *mongo.Database
+	collection      *mongo.Collection
+	collectionName  string
+	projectFlds     bson.M             // flds to be kept or omitted, use .KeepFlds or .OmitFlds to load
+	bulkWrites      []mongo.WriteModel // Used by BulK.. methods
+	iter            *mongo.Cursor
+	iterErr         error
+	limit           int64
+	upsert          bool // if true, Update will add docs not matching criteria
+	csvFile         *os.File
+	csvWriter       *csv.Writer
+	csvReader       *csv.Reader
+	CsvHeaders      map[int]string
+	CsvHeadersIndex map[string]int
+	AggPipeline     []bson.M
 }
 
 // NewMog creates instance of Mog.
@@ -319,14 +322,62 @@ func (mog *Mog) CsvOutStart(filePath string, useCRLF ...bool) error {
 }
 
 // CsvInStart opens input file and creates csv reader.
-func (mog *Mog) CsvInStart(filePath string) error {
+// Optional parm "headers" required if CsvGetVal is used. Header values are not case sensitive when used.
+// Use CsvVerifyHeaders to verify they match headers in file.
+func (mog *Mog) CsvInStart(filePath string, headers ...[]string) error {
 	var err error
 	mog.csvFile, err = os.Open(filePath)
 	if err != nil {
 		return err
 	}
 	mog.csvReader = csv.NewReader(mog.csvFile)
+
+	if len(headers) > 0 {
+		mog.CsvHeaders = make(map[int]string)
+		mog.CsvHeadersIndex = make(map[string]int)
+		for i, header := range headers[0] {
+			header = PlainString(header)
+			mog.CsvHeaders[i] = header
+			mog.CsvHeadersIndex[header] = i
+		}
+	}
 	return nil
+}
+
+// CsvVerifyHeaders compares headers used in CsvInStart to header record in csv input file.
+// Parm "rec" is the record read from input file containing column headers.
+// Match process is not case sensitive and ignores spaces.
+func (mog *Mog) CsvVerifyHeaders(rec []string) error {
+	if mog.CsvHeaders == nil {
+		return errors.New("Csv Headers Not Defined. Must include with CsvInStart.")
+	}
+	if len(rec) != len(mog.CsvHeaders) {
+		errMsg := fmt.Sprintf("Header Count Does Not Match, wanted %d, got %d", len(mog.CsvHeaders), len(rec))
+		return errors.New(errMsg)
+	}
+	for i, header := range rec {
+		header = PlainString(header)
+		if mog.CsvHeaders[i] != header {
+			errMsg := fmt.Sprintf("Header Mis-Match, wanted %s, got %s", mog.CsvHeaders[i], header)
+			return errors.New(errMsg)
+		}
+	}
+	return nil
+}
+
+// CsvGetVal returns the value from rec for the column corresponding to header.
+// For example, if a column header is "Style", CsvGetVal(rec, "style") will return the value in the "Style" column of rec.
+// See CsvInStart and CsvVerifyHeaders for more info.
+func (mog *Mog) CsvGetVal(rec []string, header string) (string, error) {
+	header = PlainString(header)
+	index, found := mog.CsvHeadersIndex[header]
+	if !found {
+		return "error", errors.New("Invalid Column Header: " + header)
+	}
+	if index >= len(rec) {
+		return "error", errors.New("Not enough columns in input record")
+	}
+	return rec[index], nil
 }
 
 // CsvWrite writes record using csv writer created by CsvOutStart.
@@ -510,4 +561,11 @@ func CreateSortOrder(keyFlds []string) bson.D {
 // NewDocId returns a unique 24 char hexadecimal value used for new doc ids.
 func NewDocId() string {
 	return primitive.NewObjectID().Hex()
+}
+
+// PlainString removes spaces and makes lowercase (used for matching headers).
+func PlainString(in string) (out string) {
+	in = strings.Join(strings.Fields(in), "")
+	out = strings.ToLower(in)
+	return
 }

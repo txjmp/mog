@@ -53,14 +53,16 @@ AggRunAll() - executes the aggregation, all results decoded into target slice
 AggShowPipeline() - displays the stages (for debugging)
 ```
 ## CSV Methods
-There are a set of methods for exporting and importing data via csv files. Some of these methods are designed for convenience at the expensive of flexibility.  
+There are a set of methods for exporting and importing data via csv files. Some of these methods are designed for convenience at the expensive of flexibility. Data is not directly imported into or exported from the collection.  
 **see examples_test.go for csv examples**
 ```
 CsvOutStart() - creates the export file and csv writer
 CsvWrite() - writes a record
 CsvOutDone() - flushes the csv writer and closes the output file
 CsvInStart() - opens the import file and creates the csv reader
+CsvVerifyHeaders() - verifies expected headers match input file headers
 CsvRead() - reads a record
+CsvGetVal() - provides accurate method of getting the correct value from an input record
 CsvInDone() - closes the input file
 CsvReadAll() - opens,reads,closes entire file and returns [][]string
 ```
