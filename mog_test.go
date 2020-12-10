@@ -18,13 +18,15 @@ type Location struct {
 }
 
 type Property struct {
-	Id         string   `bson:"_id" json:"id"` // json tags shown for example, not used here
-	LocationId string   `bson:"location_id" json:"locationId"`
-	Address    string   `bson:"address" json:"address"`
-	City       string   `bson:"city" json:"city"`
-	St         string   `bson:"st" json:"st"`
-	DateAdded  string   `bson:"date_added" json:"dateAdded"` // yyyy-mm-dd
-	Notes      []string `bson:"notes" json:"notes"`
+	Id         string   `bson:"_id"`
+	LocationId string   `bson:"location_id"`
+	Address    string   `bson:"address"`
+	City       string   `bson:"city"`
+	St         string   `bson:"st"`
+	DateAdded  string   `bson:"date_added"` // yyyy-mm-dd
+	Notes      []string `bson:"notes"`
+	SumFld1    int      `bson:"sum_fld1"`
+	SumFld2    float64  `bson:"sum_fld2"`
 }
 
 func Test_Mog(t *testing.T) {

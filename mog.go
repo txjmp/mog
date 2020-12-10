@@ -420,11 +420,25 @@ func (mog *Mog) AggOmit(flds ...string) {
 }
 
 // AggSort adds sort stage to AggPipeline.
+// Parm "keyFlds" are field names that specify sort order. Prefix name with minus sign "-" for descending.
 // More convenient than using AggStage method.
 func (mog *Mog) AggSort(keyFlds ...string) {
 	var sortOrder bson.D
 	sortOrder = CreateSortOrder(keyFlds)
 	stage := bson.M{"$sort": sortOrder}
+	mog.AggPipeline = append(mog.AggPipeline, stage)
+}
+
+// AggTotal adds a $group stage to AggPipeline.
+// A group count and group sum for each sumFld are computed.
+func (mog *Mog) AggTotal(groupBy string, sumFlds ...string) {
+	groupParms := make(bson.M)
+	groupParms["_id"] = "$" + groupBy
+	groupParms["count"] = bson.M{"$sum": 1}
+	for _, sumFld := range sumFlds {
+		groupParms["tot_"+sumFld] = bson.M{"$sum": "$" + sumFld}
+	}
+	stage := bson.M{"$group": groupParms}
 	mog.AggPipeline = append(mog.AggPipeline, stage)
 }
 

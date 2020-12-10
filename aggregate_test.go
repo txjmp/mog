@@ -26,6 +26,8 @@ type Property struct {
 	St         string   `bson:"st" json:"st"`
 	DateAdded  string   `bson:"date_added" json:"dateAdded"` // yyyy-mm-dd
 	Notes      []string `bson:"notes" json:"notes"`
+	SumFld1    int      `bson:"sum_fld1"`
+	SumFld2    float64  `bson:"sum_fld2"`
 }
 */
 func ExampleAggregate() {
@@ -59,9 +61,9 @@ func ExampleAggregate() {
 	// ===================================================================================
 	mog1.SetCollection("property")
 	props := []Property{
-		{Id: NewDocId(), Address: "200 Willow Rd", City: "Wonder", St: "MT", LocationId: "7", DateAdded: "2018-03-11"},
-		{Id: NewDocId(), Address: "321 Angel Way", City: "Wonder", St: "MT", LocationId: "7", DateAdded: "2019-04-04"},
-		{Id: NewDocId(), Address: "1950 Hangover", City: "Las Vegas", St: "NV", LocationId: "10", DateAdded: "2017-07-29"},
+		{Id: NewDocId(), Address: "200 Willow Rd", City: "Wonder", St: "MT", LocationId: "7", DateAdded: "2018-03-11", SumFld1: 7, SumFld2: 12.50},
+		{Id: NewDocId(), Address: "321 Angel Way", City: "Wonder", St: "MT", LocationId: "7", DateAdded: "2019-04-04", SumFld1: 10, SumFld2: 8.25},
+		{Id: NewDocId(), Address: "1950 Hangover", City: "Las Vegas", St: "NV", LocationId: "10", DateAdded: "2017-07-29", SumFld1: 13, SumFld2: 19.25},
 	}
 	mog1.BulkStart(len(props))
 	for _, prop := range props {
@@ -69,7 +71,7 @@ func ExampleAggregate() {
 	}
 	mog1.BulkWrite()
 	// ===================================================================================
-	//   Aggregate - count properties by state, results sorted by state
+	//   Count properties by state, results sorted by state
 	// ===================================================================================
 	mog1.AggStart()                                                          // create new pipeline slice to hold stages
 	mog1.AggStage("group", bson.M{"_id": "$st", "count": bson.M{"$sum": 1}}) // add stage - count props by state
@@ -101,7 +103,7 @@ func ExampleAggregate() {
 		fmt.Println(rec.State, rec.Count)
 	}
 	// ===================================================================================
-	//   Aggregate - lookup location
+	//   Use AggLookupId to join location docs to property docs
 	// ===================================================================================
 	mog1.AggStart()                                    // create new pipeline slice to hold stages
 	mog1.AggLookupId("location", "location_id", "loc") // add lookup & unwind stages
@@ -125,6 +127,28 @@ func ExampleAggregate() {
 	if mog1.IterErr() != nil {
 		panic(err)
 	}
+	// ===================================================================================
+	//   Compute totals using AggTotal
+	// ===================================================================================
+	type result3 struct {
+		City       string  `bson:"_id"`
+		Count      int     `bson:"count"`
+		TotSumFld1 int     `bson:"tot_sum_fld1"`
+		TotSumFld2 float64 `bson:"tot_sum_fld2"`
+	}
+	mog1.AggStart()                               // create new pipeline slice to hold stages
+	mog1.AggTotal("city", "sum_fld1", "sum_fld2") // add $group stage to compute count, sum(sumFld1), sum(sumFld2) by city
+	mog1.AggSort("_id")                           // sort by group (city)
+
+	var results3 []result3
+	err = mog1.AggRunAll(&results3)
+	if err != nil {
+		panic(err)
+	}
+	fmt.Println("--- result3 ----------------------")
+	for _, rec := range results3 {
+		fmt.Println(rec.City, rec.Count, rec.TotSumFld1, rec.TotSumFld2)
+	}
 
 	// Output:
 	// --- result1 ----------------------
@@ -137,5 +161,7 @@ func ExampleAggregate() {
 	// 200 Willow Rd Northwest
 	// 321 Angel Way Northwest
 	// 1950 Hangover Southwest
-
+	// --- result3 ----------------------
+	// Las Vegas 1 13 19.25
+	// Wonder 2 17 20.75
 }
