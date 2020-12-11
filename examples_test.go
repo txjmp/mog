@@ -161,8 +161,8 @@ func ExampleMog() {
 	// Northwest | 321 Angel Way | Wonder
 	// Southwest | 1950 Hangover | Las Vegas
 	// --- result 2 ------------------
-	// Location | Address| City
-	// Northwest | 200 Willow Rd |Wonder
-	// Northwest | 321 Angel Way |Wonder
+	// Location | Address | City
+	// Northwest | 200 Willow Rd | Wonder
+	// Northwest | 321 Angel Way | Wonder
 	// Southwest | 1950 Hangover | Las Vegas
 }
